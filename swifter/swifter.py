@@ -27,7 +27,7 @@ class _SwifterObject:
     ):
         self._obj = pandas_obj
         self._nrows = self._obj.shape[0]
-        self._SAMP_SIZE = SAMP_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25))
+        self._SAMP_SIZE = SAMP_SIZE if self._nrows > 25000 else int(ceil(self._nrows / 25.0git ))
 
         if npartitions is None:
             self._npartitions = cpu_count() * 2
@@ -153,6 +153,11 @@ class SeriesAccessor(_SwifterObject):
         """
         Apply the function to the Series using swifter
         """
+
+        # if the series is empty, return early using Pandas
+        if not self._nrows:
+            return self._obj.apply(func, convert_dtype=convert_dtype, args=args, **kwds)
+
         samp = self._obj.iloc[: self._npartitions * 2]
         # check if input is string or if the user is overriding the string processing default
         allow_dask_processing = True if self._allow_dask_on_strings else (samp.dtype != "object")
@@ -259,6 +264,12 @@ class DataFrameAccessor(_SwifterObject):
         """
         Apply the function to the DataFrame using swifter
         """
+
+        if not self._nrows:
+            return self._obj.apply(
+                func, axis=axis, broadcast=broadcast, raw=raw, reduce=reduce, result_type=result_type, args=args, **kwds
+            )
+
         samp = self._obj.iloc[: self._npartitions * 2, :]
         # check if input is string or if the user is overriding the string processing default
         allow_dask_processing = True if self._allow_dask_on_strings else ("object" not in samp.dtypes.values)
